@@ -1,0 +1,11 @@
+SEGMENT,DIMENSION_1,DIMENSION_2,DIMENSION_3,DIMENSION_4,DIMENSION_5,GRADE,NOTES
+# Replace DIMENSION_1..5 with the actual dimension names for this segment.
+# Use Y/N for binary dimensions and H/L for threshold dimensions.
+# One row per combination. 4 binary dims = 16 rows. 5 dims = 32 rows.
+# GRADE is A, B, or C. Leave NOTES blank or document edge-case reasoning.
+#
+# Example rows (delete before use):
+# Asset Managers,Y,Y,H,H,H,A,
+# Asset Managers,Y,Y,H,H,L,A,
+# Asset Managers,Y,N,L,L,L,B,keeps potential but no team signal
+# Asset Managers,N,N,L,L,L,C,
