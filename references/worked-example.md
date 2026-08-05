@@ -1,3 +1,5 @@
+> **Illustration, not defaults.** Every number in this walk-through belongs to the example. What a run actually applies comes from the engagement client-profile.md — never from here.
+
 # Worked example — a fictional B2B data-services vendor
 
 A full walk-through of the seven phases for a made-up vendor, *DataRail*. DataRail sells a compliance data platform to mid-market and enterprise B2B companies. Numbers are illustrative.

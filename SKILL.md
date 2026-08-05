@@ -1,162 +1,171 @@
 ---
 name: icp-builder
-description: Turn a raw account list into a full ICP plan — segmentation, per-segment scoring dimensions, A/B/C grading, estimated potential, and balanced territory splits. Use whenever the user mentions ICP (Ideal Customer Profile), account grading, account scoring, coverage model, territory planning, territory design, book carve-up, rep assignment, or anything that sounds like "turning our target account list into a graded, sized, and split book of business." Trigger even if the user does not say "ICP" — requests like "help me decide which accounts my reps should own", "score our prospect list and split it across the team", or "build a CAP DB for our market" should all invoke this skill.
+description: >-
+  Turn a client's raw account list into a full ICP plan — segmentation, per-segment scoring
+  dimensions, A/B/C grading, estimated potential and balanced territory splits — with every
+  segment, dimension, threshold and grade rule defined by the client in a client profile rather
+  than assumed. Use whenever someone mentions ICP or ideal customer profile, account grading,
+  account scoring, a coverage model, territory planning or design, carving up the book, or rep
+  assignment. Trigger without the acronym too: help me decide which accounts my reps should own,
+  score our prospect list and split it across the team, build an account plan database for our
+  market. Reads client-profile.md at run time and asks rather than inventing when a threshold is
+  missing. Do NOT use for designing the meetings where the book gets reviewed, which is
+  gtm-cadence-builder, or for pipeline and forecast reporting, which is gtm-dashboard-builder.
 ---
 
 # ICP Builder
 
-A structured, seven-phase workflow for turning a flat list of accounts into a graded, sized, territory-ready book of business. Use this skill when the user wants to design (or refresh) an Ideal Customer Profile and coverage model from the ground up.
+**Build:** `icp-builder · 2026-08-05 · client-configured`
 
-The skill is industry-agnostic. The user defines their own segments, scoring dimensions, and grade thresholds. Nothing in the workflow assumes a specific industry.
+A seven-phase workflow that turns a flat list of accounts into a graded, sized, territory-ready
+book of business.
+
+## The client owns the values. This skill owns the method.
+
+**Never hard-code a segment, a scoring dimension, a threshold, a grade rule, a sizing rate or a
+territory constraint into this file or its references.** They are read at run time from the
+engagement's **`client-profile.md`**.
+
+This matters more here than in most skills, because **an ICP is the client's commercial judgement
+about their own market.** A borrowed threshold produces a graded universe that looks authoritative
+and is wrong in a way nobody can see from the output — and reps then work it for a year.
+
+`client-profile.example.md` ships with this skill. It carries the proposed working ranges and the
+calibration heuristics so a workshop starts from something. **It is an input to a conversation,
+never an answer.**
+
+**Load order:** `client-profile.md` in the engagement folder → `client-profile.example.md` as the
+proposal to work through → ask the client. Stop at the first that exists.
+
+**Failure mode — stop, don't improvise.** If no profile exists and the client cannot be asked,
+**stop and say so. Never invent a segment, a threshold or a grade boundary to keep the workflow
+moving.** A half-guessed ICP is worse than none: it gets loaded into the CRM, and the guess becomes
+the company's definition of a good customer. No profile, no grading.
+
+**The skill is industry-agnostic by design.** Nothing in the method assumes a sector — the client
+defines their own segments, dimensions and thresholds, and the workflow is the same either way.
 
 ## The seven phases
 
-1. **Build the account universe** — one clean row per firm, with firmographic fields
-2. **Segment the universe** — cluster accounts that share buying behaviour
-3. **Define scoring dimensions** (per segment) — the 3–5 signals that separate good-fit from bad-fit within that segment
-4. **Build the scoring profile** — map every combination of scoring values to a grade (A / B / C)
-5. **Grade and size each account** — apply the profile, attach estimated potential ARR
-6. **Build territories** — split the graded universe into balanced, geographically coherent patches
-7. **Produce the deliverables** — a workbook and a 1-page memo
+1. **Build the account universe** — one clean row per firm, with the fields the profile names.
+2. **Segment it** — cluster accounts that share buying behaviour.
+3. **Define scoring dimensions** per segment — the signals that separate fit from non-fit.
+4. **Build the scoring profile** — map every combination of dimension values to a grade.
+5. **Grade and size** — apply the profile, attach estimated potential.
+6. **Build territories** — split the graded universe into balanced, coherent patches.
+7. **Produce the deliverables.**
 
-Each phase is covered in detail in `references/`. Read the relevant reference before doing the work for that phase — the summaries below are orientation, not instructions.
-
-Run the phases in order. Earlier decisions (segments, dimensions) constrain later ones (grading logic, territory shape). Skipping back is fine, but redo every downstream phase if you do.
-
----
-
-## Phase 1 — Build the account universe
-
-One row per firm. Ultimate parent only (roll up child accounts). Required fields:
-
-- Firm name, website, a stable firm ID
-- Region, country, state/county, city, postcode
-- At least one size signal (revenue, headcount, AUM, assets, customers — whatever matters in this industry)
-- `ACCOUNT TYPE` — `Customer` or `Prospect`
-- `TIER` — Tier 1 / Tier 2 / Tier 3 / Unaddressable (strategic importance; see `references/scoring-framework.md` for how to draw the line)
-
-Optional but useful: parent/child count, known product/tech signals, analogue spend benchmarks.
-
-If the user hands you a messy list, clean it first. Deduplicate on firm ID. Flag rows with missing geography (they cannot be territorised).
+Run them in order — earlier decisions constrain later ones. Skipping back is fine, but redo every
+downstream phase when you do. Read the reference for a phase before running it; the summaries here
+are orientation, not instructions.
 
 ---
 
-## Phase 2 — Segment the universe
+## Phase 1 — Build the universe
 
-A segment is a cluster of accounts that share buying behaviour and respond to similar scoring signals. Segments are not the same as industries — two industries can collapse into one segment if they behave identically, and one industry can split into two segments if it does not.
+One row per firm at the level the profile specifies, with the fields it lists. Clean before
+grading: deduplicate on the firm ID, and **flag rows with missing geography rather than dropping
+them** — they cannot be territorised, and the client should see how many there are.
 
-Ask the user: *"What are the 3–5 buyer types that buy differently from each other?"* Do not let them default to their industry taxonomy.
+## Phase 2 — Segment
 
-Tag every account with a `GRADING SEGMENT`. If relevant, also tag a sub-cut (e.g., Buy-side / Sell-side, SMB / Mid-market / Enterprise, Direct / Channel). Sub-cuts matter when the coverage model splits reps along that axis later.
+A segment is a cluster that buys the same way and responds to the same signals. **It is not an
+industry taxonomy**, and the most common failure is letting the client default to one. Ask which
+buyer types buy *differently from each other*, and collapse the ones that don't.
 
-Full methodology: `references/scoring-framework.md` → "Choosing segments".
+Tag every account with its segment, plus any sub-cut the profile names — sub-cuts matter when the
+coverage model later splits reps along that axis.
 
----
+Working range and the over-segmentation smell test: the profile. Method:
+`references/scoring-framework.md` → *Choosing segments*.
 
 ## Phase 3 — Define scoring dimensions
 
-For each segment, pick 3–5 dimensions that separate fit from non-fit. Each dimension should be:
+Per segment, pick the dimensions the profile records. Every one must clear two bars stated there:
+**observable** — populatable across the universe from data the client has or can buy — and
+**discriminating** — it actually splits the segment.
 
-- **Observable** — you can actually populate it for most accounts
-- **Discriminating** — it splits the segment into meaningfully different groups
-- **Binary or low-cardinality** — `Y/N`, or `H/L` against a clear threshold. Avoid continuous scores
+**Document each threshold beside its dimension name**, never the bare dimension. A threshold that
+lives only in someone's head is re-derived differently next quarter.
 
-Common dimension types: *team exists* (Y/N), *uses a competing/adjacent product* (Y/N), *has meaningful subsidiaries* (Y/N), *size band* (H/L vs. a threshold), *vendor count* (H/L), *recent trigger event* (Y/N).
-
-Dimensions can overlap between segments (e.g., *size band* will often appear in all segments), but each segment should have at least one dimension that is segment-specific.
-
-Full methodology and worked examples: `references/scoring-framework.md` → "Choosing dimensions".
-
----
+Method: `references/scoring-framework.md`.
 
 ## Phase 4 — Build the scoring profile
 
-A scoring profile is a lookup table: for each combination of dimension values in a segment, it assigns a grade (A / B / C).
+Map every combination of dimension values to a grade, per segment, into
+`assets/scoring_profile_template.csv`. Watch the row count against the ceiling in the profile —
+past it, cut a dimension rather than reasoning about combinations nobody can hold.
 
-With 4 binary dimensions that is 16 rows per segment. With 5, it is 32. Keep it tight — if you find yourself debating a sixth dimension, cut a weaker one instead.
+**Then calibrate against the client's own history**, using the sample the profile specifies: their
+best customers should land at the top grade and their churned or mis-sold ones at the bottom. **If
+they don't, the dimensions are wrong — go back to phase 3.** Do not fix it by hand-editing grades:
+that hides the error and it will resurface on every new account.
 
-Rules of thumb:
-
-- **A** = high fit. High potential, short time-to-close, worth a dedicated seller's time.
-- **B** = mid fit. Worth pursuing but not worth building a territory around. Often the bulk of the list.
-- **C** = low fit. Do not ignore entirely — run nurture, not outbound.
-
-Calibrate against your existing customers: the combinations your best current customers match should grade A. If they do not, your dimensions are wrong — iterate.
-
-Full methodology: `references/grading-model.md`.
-
----
+Method: `references/grading-model.md`.
 
 ## Phase 5 — Grade and size
 
-Run the scoring profile over the universe. Every account gets a grade.
+Apply the profile across the universe, then attach estimated potential by the sizing method the
+client chose. Compute whitespace for existing customers as the profile defines it.
 
-Then attach an estimated potential ARR per account. The user will have one of:
+**Run the distribution sanity check** the profile specifies, per segment. A grade that swallows the
+segment, or one that almost nobody gets, means the dimensions are not discriminating — **report
+that rather than shipping a distribution that flatters the model.**
 
-- An analogue-spend benchmark (what similar customers pay today)
-- A size-based formula (e.g., $X per employee, $Y per $B of AUM)
-- A top-down market-sizing number to divide
-
-Use the method they already trust. Do not invent one. Flag accounts where the sizing method clearly does not fit (e.g., a benchmark derived from buy-side applied to a sell-side name) and recommend a per-segment benchmark instead.
-
-Output: the universe file, enriched with `GRADE` and `ESTIMATED_POTENTIAL` columns, plus a whitespace column (`ESTIMATED_POTENTIAL` − `CURRENT_SPEND`) for customers.
-
-Full methodology: `references/grading-model.md` → "Sizing potential".
-
----
+Method: `references/grading-model.md` → *Sizing potential*.
 
 ## Phase 6 — Build territories
 
-Territories need to be:
+Split the graded universe into balanced, coherent patches against the balance target, coherence
+rules and constraints in the profile. Named-rep pins and anything that must not be split are the
+client's, not a solver's.
 
-1. **Balanced** — roughly equal account count *and* total potential
-2. **Geographically coherent** — a rep should not be zig-zagging across the map
-3. **Coverage-consistent** — a territory is either new-logo, retention/hybrid, or one of each; do not mix silently
-4. **Right-sized for the headcount you actually have** — do not design 12 territories if you have 6 reps
-
-Build a lookup table (state → territory for NA-style carve-ups, country → sub-region for EMEA-style). Let the lookup do the geographic work; then balance within the sub-region using alphabetical splits or A/B/C mix where needed.
-
-If one sub-region is too small for a dedicated rep, mark it **Hybrid** (served part-time by a rep with another book) rather than invent a territory.
-
-Full methodology: `references/territory-build.md`.
-
-Helper script: `scripts/build_territories.py` — balances accounts across N territories minimising variance on count and potential, honouring a geography lock.
-
----
+Method: `references/territory-build.md`.
 
 ## Phase 7 — Deliverables
 
-Default deliverables (user chose this explicitly):
+1. **Workbook (.xlsx)** — the graded, sized universe plus rollups. Tab structure in
+   `assets/workbook_layout.md`.
+2. **1-page memo (.md)** — method, grade distribution, headline numbers, territory
+   recommendations. Template in `assets/memo_template.md`.
 
-1. **Workbook (.xlsx)** — the graded, sized universe plus rollups. Tab structure in `assets/workbook_layout.md`.
-2. **1-page memo (.md)** — method, grade distribution, headline numbers, territory recommendations. Template in `assets/memo_template.md`.
+A summary deck is not in the default bundle; build one only if asked, and keep it short.
 
-A summary deck is **not** in the default bundle. Build one only if the user asks. When they do, keep it to 3–5 slides: territory summary by region, then one slide per region showing the split.
-
----
-
-## Workflow notes
-
-**Ask before inventing.** The user owns the segment definitions, the dimension list, the grading thresholds, and the potential-sizing method. Confirm these before running anything. Guessing destroys the skill's value — the whole point is that the output reflects *their* ICP, not a generic one.
-
-**Show your working.** When you grade accounts, save the scoring profile alongside the graded list so the logic is auditable. A CFO buyer or a VP Sales reviewing the output will ask *"why is Company X an A and Company Y a B?"* — you need to be able to answer.
-
-**Keep the grading profile small.** If the grading profile has more than ~32 rows (5 binary dimensions), you have probably overcomplicated it. Cut dimensions until it fits.
-
-**Iterate on real data, not theory.** Draft the scoring profile, run it against 20–30 existing customers, then sanity-check: do your best current customers show up as A? Do your churned/bad-fit ones show up as C? Adjust the profile until the answer to both is yes.
-
-**Helper scripts are optional.** `scripts/grade_accounts.py` and `scripts/build_territories.py` do the deterministic work (apply a profile; balance a split). Use them when the universe is big enough that doing it by hand is error-prone. For under ~100 accounts, it is often faster to grade in the workbook directly.
+**State provenance on the face of the deliverable:** which values came from the client's profile,
+which were inferred, and which checks failed. A graded universe with invisible provenance gets
+treated as fact.
 
 ---
+
+## Standing rules
+
+**Propose, never impose.** The client owns the segments, the dimensions and the thresholds. The
+skill's job is to structure the conversation, run the arithmetic, and **show the client where their
+own data disagrees with them** — that last part is most of the value.
+
+**Iterate on real data, not theory.** Draft the profile, run it against the calibration sample, and
+adjust until both the good and the bad customers land where they should.
+
+**Helper scripts are optional.** `scripts/grade_accounts.py` and `scripts/build_territories.py` do
+the deterministic work — applying a profile, balancing a split. **They read the client's scoring
+profile as input and contain no thresholds of their own.** For a small universe it is often faster
+to grade in the workbook directly.
 
 ## Reference files
 
-- `references/scoring-framework.md` — choosing segments and scoring dimensions, with worked examples
-- `references/grading-model.md` — A/B/C thresholds, calibration against existing customers, sizing potential
-- `references/territory-build.md` — balancing rules, geography locks, new-logo vs. hybrid, sub-region too-small handling
-- `references/worked-example.md` — a full walk-through for a fictional B2B data-services vendor, end to end
-- `assets/scoring_profile_template.csv` — a ready-to-edit scoring profile file
-- `assets/workbook_layout.md` — the tab structure and column headers for the output xlsx
-- `assets/memo_template.md` — the 1-page memo skeleton
+- `references/scoring-framework.md` — choosing segments and dimensions; how to set a threshold.
+- `references/grading-model.md` — building the profile, calibrating it, sizing potential.
+- `references/territory-build.md` — balancing, coherence, constraints.
+- `references/worked-example.md` — a full walk-through. **An illustration, not a set of defaults**
+  — every number in it belongs to that example.
+- `assets/` — scoring-profile template, workbook layout, memo template.
+- `client-profile.example.md` — the proposed working ranges and calibration heuristics.
 
-Read the reference file for a phase *before* starting that phase. Do not try to hold the whole skill in working memory.
+---
+*Rebuilt 5 Aug 2026 to `NEW-SKILL-STANDARD.md`, client-configured. The client-specific values were
+already externalised — segments, dimensions and thresholds have always been the client's — so what
+moved were the **method heuristics**: segment and dimension counts, the observability and
+discrimination bars, the profile-size ceiling, the calibration sample, the distribution check and
+the minimum cell size. They now sit in `client-profile.example.md` as proposals an engagement can
+argue with, rather than in the skill as rules it cannot. Surviving digits here are phase numbers and
+the date.*
