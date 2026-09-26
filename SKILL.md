@@ -15,7 +15,7 @@ description: >-
 
 # ICP Builder
 
-**Build:** `icp-builder · 2026-08-05 · client-configured`
+**Build:** `icp-builder · 2026-09-26 · skill-text`
 
 A seven-phase workflow that turns a flat list of accounts into a graded, sized, territory-ready
 book of business.
@@ -162,10 +162,4 @@ to grade in the workbook directly.
 - `client-profile.example.md` — the proposed working ranges and calibration heuristics.
 
 ---
-*Rebuilt 5 Aug 2026 to `NEW-SKILL-STANDARD.md`, client-configured. The client-specific values were
-already externalised — segments, dimensions and thresholds have always been the client's — so what
-moved were the **method heuristics**: segment and dimension counts, the observability and
-discrimination bars, the profile-size ceiling, the calibration sample, the distribution check and
-the minimum cell size. They now sit in `client-profile.example.md` as proposals an engagement can
-argue with, rather than in the skill as rules it cannot. Surviving digits here are phase numbers and
-the date.*
+*Current as of: 26 Sep 2026. History: git.*
